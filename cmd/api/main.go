@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -29,7 +29,6 @@ type config struct {
 
 type application struct {
 	config config
-	logger *log.Logger
 	models data.Models
 }
 
@@ -44,18 +43,18 @@ func main() {
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
 	flag.Parse()
 
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 
 	db, err := openDB(cfg)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
 	}
 	defer db.Close()
-	logger.Printf("database connection pool established")
+	slog.Info("database connection pool established")
 
 	app := &application{
 		config: cfg,
-		logger: logger,
 		models: data.NewModels(db),
 	}
 
@@ -67,9 +66,9 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	logger.Printf("starting %s server on %s", cfg.env, srv.Addr)
+	slog.Info("starting server", "env", cfg.env, "addr", srv.Addr)
 	err = srv.ListenAndServe()
-	logger.Fatal(err)
+	slog.Error(err.Error())
 }
 
 func openDB(cfg config) (*sql.DB, error) {
