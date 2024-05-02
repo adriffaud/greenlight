@@ -4,9 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"time"
 
@@ -66,17 +64,10 @@ func main() {
 		models: data.NewModels(db),
 	}
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.port),
-		Handler:      app.routes(),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+	err = app.serve()
+	if err != nil {
+		slog.Error(err.Error())
 	}
-
-	slog.Info("starting server", "env", cfg.env, "addr", srv.Addr)
-	err = srv.ListenAndServe()
-	slog.Error(err.Error())
 }
 
 func openDB(cfg config) (*sql.DB, error) {
