@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -119,4 +120,20 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 	}
 
 	return i
+}
+
+func (app *application) background(fn func()) {
+	app.wg.Add(1)
+
+	go func() {
+		fn()
+
+		defer func() {
+			if err := recover(); err != nil {
+				slog.Error(fmt.Sprintf("%s", err))
+			}
+		}()
+
+		defer app.wg.Done()
+	}()
 }
